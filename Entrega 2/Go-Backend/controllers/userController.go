@@ -1,139 +1,83 @@
-package controller
+package controllers
 
 import (
-	"encoding/json"
 	"go-backend/models"
 	"go-backend/services"
+	"log"
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
-// UsuarioController maneja las solicitudes HTTP relacionadas con los usuarios
-type UsuarioController struct {
-	Service *services.UserServices // Servicio que maneja la lógica de negocio de los usuarios
+type UserController struct {
+	UserService *services.UserService
 }
 
-// Nueva instancia del controlador
-func NewUsuarioController(service *services.UserServices) *UsuarioController {
-	return &UsuarioController{Service: service}
+func NewUserController(userService *services.UserService) *UserController {
+	return &UserController{UserService: userService}
 }
 
-// Obtener un usuario por ID
-func (uc *UsuarioController) ObtenerUsuario(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/") // Dividir la URL para obtener el ID
-	if len(parts) < 3 {
-		http.Error(w, "ID no proporcionado", http.StatusBadRequest)
+func (c *UserController) CreateUser(ctx *gin.Context) {
+	var user models.User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	id, err := strconv.Atoi(parts[2]) // Convertir el ID de string a int
-	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+	if err := c.UserService.CreateUser(&user); err != nil {
+		log.Printf("Error creating user: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user", "details": err.Error()})
 		return
 	}
 
-	// Obtener usuario del servicio
-	usuario, err := uc.Service.ObtenerUsuarioPorID(id)
-	if err != nil {
-		http.Error(w, "Usuario no encontrado", http.StatusNotFound)
-		return
-	}
-
-	// Devolver el usuario en formato JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(usuario)
+	ctx.JSON(http.StatusCreated, gin.H{"message": "User created successfully", "user": user})
 }
 
-// Crear un nuevo usuario
-func (uc *UsuarioController) CrearUsuario(w http.ResponseWriter, r *http.Request) {
-	var usuario models.User
-	err := json.NewDecoder(r.Body).Decode(&usuario) // Decodificar el JSON en un objeto Usuario
+func (c *UserController) GetUser(ctx *gin.Context) {
+	id, _ := strconv.Atoi(ctx.Param("id"))
+	user, err := c.UserService.GetUserByID(uint(id))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	// Crear usuario en el servicio
-	usuarioCreado, err := uc.Service.CrearUsuario(usuario)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Devolver el usuario creado en formato JSON
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(usuarioCreado)
+	ctx.JSON(http.StatusOK, user)
 }
 
-// Obtener todos los usuarios
-func (uc *UsuarioController) ObtenerUsuarios(w http.ResponseWriter, r *http.Request) {
-	usuarios, err := uc.Service.ObtenerUsuarios() // Obtener todos los usuarios
+func (c *UserController) GetAllUsers(ctx *gin.Context) {
+	users, err := c.UserService.GetAllUsers()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve users"})
 		return
 	}
 
-	// Devolver la lista de usuarios en formato JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(usuarios)
+	ctx.JSON(http.StatusOK, users)
 }
 
-// Actualizar un usuario
-func (uc *UsuarioController) ActualizarUsuario(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		http.Error(w, "ID no proporcionado", http.StatusBadRequest)
+func (c *UserController) UpdateUser(ctx *gin.Context) {
+	id, _ := strconv.Atoi(ctx.Param("id"))
+	var user models.User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	id, err := strconv.Atoi(parts[2]) // Obtener y convertir el ID
-	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+	user.ID = uint(id)
+	if err := c.UserService.UpdateUser(&user); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
 
-	var usuario models.User
-	err = json.NewDecoder(r.Body).Decode(&usuario) // Decodificar el cuerpo en un usuario
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Actualizar el usuario a través del servicio
-	usuarioActualizado, err := uc.Service.ActualizarUsuario(id, usuario)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Devolver el usuario actualizado en formato JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(usuarioActualizado)
+	ctx.JSON(http.StatusOK, user)
 }
 
-// Eliminar un usuario
-func (uc *UsuarioController) EliminarUsuario(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		http.Error(w, "ID no proporcionado", http.StatusBadRequest)
+func (c *UserController) DeleteUser(ctx *gin.Context) {
+	id, _ := strconv.Atoi(ctx.Param("id"))
+	if err := c.UserService.DeleteUser(uint(id)); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
 
-	id, err := strconv.Atoi(parts[2]) // Obtener el ID desde la URL
-	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
-		return
-	}
-
-	// Eliminar el usuario a través del servicio
-	err = uc.Service.EliminarUsuario(id)
-	if err != nil {
-		http.Error(w, "Usuario no encontrado", http.StatusNotFound)
-		return
-	}
-
-	// Confirmar la eliminación con un código 204 (sin contenido)
-	w.WriteHeader(http.StatusNoContent)
+	ctx.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }

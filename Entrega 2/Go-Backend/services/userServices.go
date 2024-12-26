@@ -6,76 +6,44 @@ import (
 	"gorm.io/gorm"
 )
 
-// userServices estructura para manejar los servicios de usuarios
-type UserServices struct {
+type UserService struct {
 	DB *gorm.DB
 }
 
-// NewUsuarioService crea una nueva instancia de userServices
-func NewUsuarioService(db *gorm.DB) *UserServices {
-	return &UserServices{DB: db}
+func NewUserService(db *gorm.DB) *UserService {
+	return &UserService{DB: db}
 }
 
-// ObtenerUsuarioPorID obtiene un usuario por su ID
-func (us *UserServices) ObtenerUsuarioPorID(userID int) (*models.User, error) {
-	var usuario models.User
-	// Consultar la base de datos buscando un usuario por ID
-	if err := us.DB.Where("id = ?", userID).First(&usuario).Error; err != nil {
-		return nil, err
-	}
-	return &usuario, nil
+func (s *UserService) CreateUser(user *models.User) error {
+	return s.DB.Create(user).Error
 }
 
-// CrearUsuario crea un nuevo usuario en la base de datos
-func (us *UserServices) CrearUsuario(usuario models.User) (*models.User, error) {
-	// Crear un usuario en la base de datos
-	if err := us.DB.Create(&usuario).Error; err != nil {
-		return nil, err
-	}
-	return &usuario, nil
+func (s *UserService) GetAllUsers() ([]models.User, error) {
+	var users []models.User
+	result := s.DB.Find(&users)
+	return users, result.Error
 }
 
-// ObtenerUsuarios obtiene todos los usuarios de la base de datos
-func (us *UserServices) ObtenerUsuarios() ([]models.User, error) {
-	var usuarios []models.User
-	// Consultar todos los usuarios
-	if err := us.DB.Find(&usuarios).Error; err != nil {
+func (s *UserService) GetUserByID(id uint) (*models.User, error) {
+	var user models.User
+	if err := s.DB.First(&user, id).Error; err != nil {
 		return nil, err
 	}
-	return usuarios, nil
+	return &user, nil
 }
 
-// ActualizarUsuario actualiza los datos de un usuario en la base de datos
-func (us *UserServices) ActualizarUsuario(userID int, usuario models.User) (*models.User, error) {
-	var existingUser models.User
-	// Buscar el usuario existente por ID
-	if err := us.DB.Where("id = ?", userID).First(&existingUser).Error; err != nil {
-		return nil, err
-	}
-	// Actualizar los campos necesarios
-	existingUser.Nombre = usuario.Nombre
-	existingUser.Email = usuario.Email
-	existingUser.Password = usuario.Password
-	existingUser.Rol = usuario.Rol
-
-	// Guardar los cambios
-	if err := us.DB.Save(&existingUser).Error; err != nil {
-		return nil, err
-	}
-
-	return &existingUser, nil
+func (s *UserService) UpdateUser(user *models.User) error {
+	return s.DB.Save(user).Error
 }
 
-// EliminarUsuario elimina un usuario por su ID de la base de datos
-func (us *UserServices) EliminarUsuario(userID int) error {
-	var usuario models.User
-	// Buscar el usuario por ID
-	if err := us.DB.Where("id = ?", userID).First(&usuario).Error; err != nil {
-		return err
+func (s *UserService) DeleteUser(id uint) error {
+	return s.DB.Delete(&models.User{}, id).Error
+}
+
+func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	if err := s.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
 	}
-	// Eliminar el usuario
-	if err := us.DB.Delete(&usuario).Error; err != nil {
-		return err
-	}
-	return nil
+	return &user, nil
 }
