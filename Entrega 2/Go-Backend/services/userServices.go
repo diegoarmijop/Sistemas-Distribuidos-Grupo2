@@ -14,6 +14,19 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{DB: db}
 }
 
+// services/user_service.go
+
+func (s *UserService) LoginUser(email, password string) (*models.User, error) {
+	var user models.User
+
+	// Buscar usuario por email
+	if err := s.DB.Where("email = ? AND password = ?", email, password).First(&user).Error; err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (s *UserService) CreateUser(user *models.User) error {
 	return s.DB.Create(user).Error
 }

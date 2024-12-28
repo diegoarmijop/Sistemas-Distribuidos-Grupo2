@@ -18,6 +18,34 @@ func NewUserController(userService *services.UserService) *UserController {
 	return &UserController{UserService: userService}
 }
 
+func (c *UserController) Login(ctx *gin.Context) {
+	var loginRequest struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&loginRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Datos de entrada inválidos",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	user, err := c.UserService.LoginUser(loginRequest.Email, loginRequest.Password)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Credenciales inválidas",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Login exitoso",
+		"user":    user,
+	})
+}
+
 func (c *UserController) CreateUser(ctx *gin.Context) {
 	var user models.User
 	if err := ctx.ShouldBindJSON(&user); err != nil {
