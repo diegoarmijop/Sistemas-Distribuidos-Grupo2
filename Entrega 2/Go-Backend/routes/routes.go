@@ -15,6 +15,8 @@ func SetupRouter(router *gin.Engine) *gin.Engine {
 		InitCampoRoutes(api)
 		InitPestTypeRoutes(api)
 		InitPlagueEventRoutes(api)
+		InitAlertRoutes(api)
+		InitMedicionRoutes(api)
 	}
 
 	return router

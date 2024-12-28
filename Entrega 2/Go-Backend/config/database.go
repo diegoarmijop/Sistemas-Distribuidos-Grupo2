@@ -71,6 +71,7 @@ func migrateDatabase() error {
 		&models.Configuration{},
 		&models.Sensor{},
 		&models.User{},
+		&models.Sensing{},
 	)
 	if err != nil {
 		return fmt.Errorf("error en la auto-migración de PlagueEvent y otras tablas: %v", err)
