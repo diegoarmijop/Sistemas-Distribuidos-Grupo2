@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"go-backend/models"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -95,4 +96,38 @@ func (service *AlertService) ObtenerAlertasPorEventoPlagaID(eventoPlagaID uint) 
 		return nil, err
 	}
 	return alertas, nil
+}
+
+type ResumenAlertas struct {
+	Total      int    `json:"total"`
+	Diferencia int    `json:"diferencia"`
+	Tendencia  string `json:"tendencia"`
+}
+
+func (s *AlertService) ObtenerResumenAlertas() (*ResumenAlertas, error) {
+	var totalActual int64
+	var totalAnterior int64
+
+	// Total de alertas activas
+	if err := s.DB.Model(&models.Alert{}).Where("estado = ?", "Activa").Count(&totalActual).Error; err != nil {
+		return nil, err
+	}
+
+	// Total de alertas de la semana anterior
+	semanaAnterior := time.Now().AddDate(0, 0, -7)
+	if err := s.DB.Model(&models.Alert{}).Where("fecha_hora < ? AND estado = ?", semanaAnterior, "Activa").Count(&totalAnterior).Error; err != nil {
+		return nil, err
+	}
+
+	diferencia := int(totalActual - totalAnterior)
+	tendencia := "down"
+	if diferencia > 0 {
+		tendencia = "up"
+	}
+
+	return &ResumenAlertas{
+		Total:      int(totalActual),
+		Diferencia: diferencia,
+		Tendencia:  tendencia,
+	}, nil
 }

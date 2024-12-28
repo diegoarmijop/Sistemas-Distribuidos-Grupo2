@@ -23,5 +23,6 @@ func InitAlertRoutes(api *gin.RouterGroup) {
 		alertas.DELETE("/:id", alertController.EliminarAlerta)                                        // Eliminar una alerta
 		alertas.GET("/usuario/:usuario_id", alertController.ObtenerAlertasPorUsuarioID)               // Obtener alertas por ID de usuario
 		alertas.GET("/evento_plaga/:evento_plaga_id", alertController.ObtenerAlertasPorEventoPlagaID) // Obtener alertas por ID de evento de plaga
+		alertas.GET("/resumen", alertController.ObtenerResumenAlertas)
 	}
 }

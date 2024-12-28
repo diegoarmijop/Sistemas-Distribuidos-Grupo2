@@ -140,3 +140,15 @@ func (controller *AlertController) ObtenerAlertasPorEventoPlagaID(c *gin.Context
 
 	c.JSON(http.StatusOK, alertas)
 }
+
+func (c *AlertController) ObtenerResumenAlertas(ctx *gin.Context) {
+	resumen, err := c.AlertService.ObtenerResumenAlertas()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error al obtener resumen de alertas",
+			"details": err.Error(),
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, resumen)
+}

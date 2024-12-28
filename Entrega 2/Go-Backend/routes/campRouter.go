@@ -20,5 +20,7 @@ func InitCampoRoutes(api *gin.RouterGroup) {
 		campos.GET("/", campoController.ObtenerTodosCampos)
 		campos.GET("/ubicacion/:ubicacion", campoController.ObtenerCamposPorUbicacion)
 		campos.PUT("/:id/cultivo", campoController.ActualizarCultivoCampo)
+		campos.GET("/resumen", campoController.ObtenerResumenCampos) // Nueva ruta
+
 	}
 }

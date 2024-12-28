@@ -21,5 +21,7 @@ func InitPlagueEventRoutes(api *gin.RouterGroup) {
 		plagueEvents.GET("/:id", plagueEventController.GetByID)
 		plagueEvents.PUT("/:id", plagueEventController.Update)
 		plagueEvents.DELETE("/:id", plagueEventController.Delete)
+		plagueEvents.GET("/resumen", plagueEventController.ObtenerResumenControl) // Efectividad del control de plagas
+		plagueEvents.GET("/estadisticas", plagueEventController.ObtenerEstadisticas)
 	}
 }

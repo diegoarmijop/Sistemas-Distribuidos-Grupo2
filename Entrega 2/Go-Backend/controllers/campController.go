@@ -96,3 +96,17 @@ func (controller *CampoController) ActualizarCultivoCampo(c *gin.Context) {
 	// Responder con el campo actualizado
 	c.JSON(http.StatusOK, campo)
 }
+
+// controllers/campo_controller.go
+func (controller *CampoController) ObtenerResumenCampos(c *gin.Context) {
+	resumen, err := controller.CampoService.ObtenerResumenCampos()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error al obtener el resumen de campos",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, resumen)
+}

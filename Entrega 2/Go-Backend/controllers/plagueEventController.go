@@ -87,3 +87,25 @@ func (c *PlagueEventController) Delete(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Evento de plaga eliminado exitosamente"})
 }
+
+func (c *PlagueEventController) ObtenerResumenControl(ctx *gin.Context) {
+	resumen, err := c.service.ObtenerResumenControl()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error al obtener resumen de control",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, resumen)
+}
+
+func (c *PlagueEventController) ObtenerEstadisticas(ctx *gin.Context) {
+	estadisticas, err := c.service.ObtenerEstadisticas()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, estadisticas)
+}

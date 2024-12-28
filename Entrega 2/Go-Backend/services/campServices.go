@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 	"go-backend/models"
-
 	"gorm.io/gorm"
+	"time"
 )
 
 // CampoService gestiona las operaciones sobre los campos
@@ -64,4 +64,39 @@ func (service *CampService) ActualizarCultivoCampo(campoID uint, tipoCultivo str
 	}
 
 	return &campo, nil
+}
+
+// services/camp_service.go
+type ResumenCampos struct {
+	Total     int    `json:"total"`
+	Nuevos    int    `json:"nuevos"`
+	Tendencia string `json:"tendencia"`
+}
+
+// Agregar el método para obtener el resumen
+func (service *CampService) ObtenerResumenCampos() (*ResumenCampos, error) {
+	var total int64
+	var nuevos int64
+
+	// Contar total de campos
+	if err := service.DB.Model(&models.Camp{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// Contar campos nuevos este mes
+	primerDiaMes := time.Now().AddDate(0, 0, -30)
+	if err := service.DB.Model(&models.Camp{}).Where("created_at >= ?", primerDiaMes).Count(&nuevos).Error; err != nil {
+		return nil, err
+	}
+
+	tendencia := "down"
+	if nuevos > 0 {
+		tendencia = "up"
+	}
+
+	return &ResumenCampos{
+		Total:     int(total),
+		Nuevos:    int(nuevos),
+		Tendencia: tendencia,
+	}, nil
 }
