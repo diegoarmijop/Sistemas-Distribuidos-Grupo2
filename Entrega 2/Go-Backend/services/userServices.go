@@ -45,12 +45,15 @@ func (s *UserService) GetUserByID(id uint) (*models.User, error) {
 	return &user, nil
 }
 
-func (s *UserService) UpdateUser(user *models.User) error {
-	return s.DB.Save(user).Error
-}
-
 func (s *UserService) DeleteUser(id uint) error {
-	return s.DB.Delete(&models.User{}, id).Error
+	// Primero verificamos que el usuario existe
+	var user models.User
+	if err := s.DB.First(&user, id).Error; err != nil {
+		return err
+	}
+
+	// Realizar el borrado suave (soft delete) ya que estamos usando gorm.Model
+	return s.DB.Delete(&user).Error
 }
 
 func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
@@ -59,4 +62,21 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (s *UserService) UpdateUser(id uint, userData *models.User) error {
+	// Primero verificamos que el usuario existe
+	var existingUser models.User
+	if err := s.DB.First(&existingUser, id).Error; err != nil {
+		return err
+	}
+
+	// Actualizamos solo nombre y email
+	updates := map[string]interface{}{
+		"nombre": userData.Nombre,
+		"email":  userData.Email,
+	}
+
+	// Realizar la actualización
+	return s.DB.Model(&existingUser).Updates(updates).Error
 }

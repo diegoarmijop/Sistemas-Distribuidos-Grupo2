@@ -83,29 +83,72 @@ func (c *UserController) GetAllUsers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, users)
 }
 
-func (c *UserController) UpdateUser(ctx *gin.Context) {
-	id, _ := strconv.Atoi(ctx.Param("id"))
-	var user models.User
-	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (c *UserController) DeleteUser(ctx *gin.Context) {
+	// Obtener el ID del usuario
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "ID de usuario inválido",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	user.ID = uint(id)
-	if err := c.UserService.UpdateUser(&user); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+	// Llamar al servicio para eliminar
+	if err := c.UserService.DeleteUser(uint(id)); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error al eliminar el usuario",
+			"details": err.Error(),
+		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Usuario eliminado exitosamente",
+	})
 }
 
-func (c *UserController) DeleteUser(ctx *gin.Context) {
-	id, _ := strconv.Atoi(ctx.Param("id"))
-	if err := c.UserService.DeleteUser(uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+func (c *UserController) UpdateUser(ctx *gin.Context) {
+	// Obtener el ID del usuario
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "ID de usuario inválido",
+		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+	// Estructura para validar solo nombre y email
+	var updateData struct {
+		Nombre string `json:"nombre" binding:"required"`
+		Email  string `json:"email" binding:"required,email"`
+	}
+
+	// Vincular los datos JSON recibidos
+	if err := ctx.ShouldBindJSON(&updateData); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Datos de entrada inválidos",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Crear usuario con los datos actualizados
+	userToUpdate := &models.User{
+		Nombre: updateData.Nombre,
+		Email:  updateData.Email,
+	}
+
+	// Llamar al servicio para actualizar
+	if err := c.UserService.UpdateUser(uint(id), userToUpdate); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Error al actualizar el usuario",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Usuario actualizado exitosamente",
+	})
 }
