@@ -10,5 +10,5 @@ type PestType struct {
 
 // Esquema para la tabla en la base de datos
 func (PestType) TableName() string {
-	return "tipoplaga" // Nombre de la tabla en la base de datos
+	return "tipo_plaga" // Nombre de la tabla en la base de datos
 }
