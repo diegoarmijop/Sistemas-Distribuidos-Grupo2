@@ -54,23 +54,23 @@ func connectToDatabase(dsn string) error {
 
 // migrateDatabase realiza las migraciones automáticas en la base de datos
 func migrateDatabase() error {
-	// Primero migramos las tablas sin claves foráneas
-	err := DB.AutoMigrate(
-		&models.Sensor{}, // Debe migrarse primero
-	)
-	if err != nil {
-		return fmt.Errorf("error en la auto-migración de PestType: %v", err)
+	// Migrar tablas independientes primero
+	if err := DB.AutoMigrate(
+		&models.Ruta{},
+		&models.Sensor{},
+	); err != nil {
+		return fmt.Errorf("error en la migración de tablas independientes: %v", err)
 	}
 
-	// Luego migramos las tablas que dependen de claves foráneas
-	err = DB.AutoMigrate(
+	// Luego migrar las tablas con dependencias
+	if err := DB.AutoMigrate(
 		&models.Dron{},
-		&models.Nodo{}, // Relacionado con PlagueEvent
-		&models.Ruta{},
-	)
-	if err != nil {
-		return fmt.Errorf("error en la auto-migración de PlagueEvent y otras tablas: %v", err)
+		&models.Nodo{},
+	); err != nil {
+		return fmt.Errorf("error en la migración de tablas dependientes: %v", err)
 	}
+	// Modificar columna manualmente si la migración no lo aplica automáticamente
+	DB.Exec("ALTER TABLE dron ALTER COLUMN ruta_id DROP NOT NULL;")
 
 	return nil
 }

@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+
 	// Conectar a la base de datos
 	config.ConnectDB()
 
@@ -26,7 +27,7 @@ func main() {
 	// Leer el puerto desde la variable de entorno o usar el valor por defecto
 	port := os.Getenv("APP_PORT")
 
-	log.Printf("Servidor iniciado en el puerto %s", port)
+	//log.Printf("Servidor iniciado en el puerto %s", port)
 	if port == "" {
 		port = ":8081" // Valor por defecto, con el prefijo ':'
 	} else if port[0] != ':' {

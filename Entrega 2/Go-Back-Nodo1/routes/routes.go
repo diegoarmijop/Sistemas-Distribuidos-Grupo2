@@ -9,7 +9,10 @@ func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
 	// Inicialización de rutas
-	//api := router.Group("/api") {	}
+	api := router.Group("/api")
+	{
+		InitDronRoutes(api)
+	}
 
 	return router
 }

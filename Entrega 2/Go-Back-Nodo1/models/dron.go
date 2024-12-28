@@ -5,11 +5,10 @@ type Dron struct {
 	Estado     string `json:"estado"`
 	Modelo     string `json:"modelo"`
 	Ubicacion  string `json:"ubicacion"`
-	RutaID     uint   `json:"ruta_id"` // Clave foránea explícita
-	RutaActual Ruta   `gorm:"foreignKey:RutaID" json:"ruta_actual"`
+	RutaID     *uint  `json:"ruta_id"` // Campo opcional
+	RutaActual *Ruta  `gorm:"foreignKey:RutaID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"ruta_actual,omitempty"`
 }
 
-// Esquema
 func (Dron) TableName() string {
 	return "dron"
 }
