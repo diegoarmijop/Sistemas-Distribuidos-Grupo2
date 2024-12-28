@@ -2,8 +2,8 @@
 package main
 
 import (
+	"github.com/gin-contrib/cors"
 	"go-backend/config"
-	"go-backend/middleware"
 	"go-backend/routes"
 	"io"
 	"log"
@@ -17,22 +17,28 @@ func main() {
 	config.ConnectDB()
 
 	// Configuración del servidor
-	app := gin.Default()
+	router := gin.Default()
 	gin.DefaultWriter = io.MultiWriter(os.Stdout, log.Writer())
-	app.Use(middleware.CorsMiddleware()) // Registrar middleware de CORS
 
-	// Configurar el router con las rutas definidas
-	router := routes.SetupRouter()
+	// Configuración de CORS
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 3600,
+	}))
+
+	// Pasar el router a SetupRouter
+	routes.SetupRouter(router) // <- Aquí pasamos el router como parámetro
 
 	// Leer el puerto desde la variable de entorno o usar el valor por defecto
 	port := os.Getenv("APP_PORT")
-
-	log.Printf("Servidor iniciado en el puerto %s", port)
 	if port == "" {
-		port = ":8080" // Valor por defecto, con el prefijo ':'
-	} else if port[0] != ':' {
-		port = ":" + port
+		port = "8080"
 	}
+	port = ":" + port
 
 	log.Printf("Servidor iniciado en el puerto %s", port)
 

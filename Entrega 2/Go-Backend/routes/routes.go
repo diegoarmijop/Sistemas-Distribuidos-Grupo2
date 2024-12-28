@@ -5,8 +5,8 @@ import (
 )
 
 // SetupRouter configura el router principal
-func SetupRouter() *gin.Engine {
-	router := gin.Default()
+func SetupRouter(router *gin.Engine) *gin.Engine {
+	//router := gin.Default()
 
 	// Inicialización de rutas
 	api := router.Group("/api")
