@@ -12,6 +12,9 @@ func SetupRouter() *gin.Engine {
 	api := router.Group("/api")
 	{
 		InitDronRoutes(api)
+		InitNodoRoutes(api)
+		InitSensorRoutes(api)
+		InitRutaRoutes(api)
 	}
 
 	return router
