@@ -135,8 +135,8 @@
         { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/dashboard' },
         { title: 'Usuarios', icon: 'mdi-account-group', path: '/users' },
         { title: 'Sectores', icon: 'mdi-seed', path: '/sectors' },
-        { title: 'Reportes', icon: 'mdi-chart-bar', path: '/reports' },
-        { title: 'Configuración', icon: 'mdi-cog', path: '/settings' },
+        { title: 'Reportes', icon: 'mdi-chart-bar', path: '/reportes' },
+        { title: 'Configuración', icon: 'mdi-cog', path: '/configuracion' },
       ]
     }),
   
