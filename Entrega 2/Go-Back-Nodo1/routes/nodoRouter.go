@@ -9,8 +9,11 @@ import (
 )
 
 func InitNodoRoutes(api *gin.RouterGroup) {
-	// Inicialización de servicios y controladores
-	nodoService := services.NewNodoService(config.DB)
+	// Inicialización de RutaService
+	rutaService := services.NewRutaService(config.DB)
+
+	// Inicialización del servicio NodoService con RabbitMQ, BaseCentral, y RutaService
+	nodoService := services.NewNodoService(config.DB, config.RabbitMQ.Channel, config.BaseCentral, rutaService)
 	nodoController := controllers.NewNodoController(nodoService)
 
 	nodos := api.Group("/nodo")

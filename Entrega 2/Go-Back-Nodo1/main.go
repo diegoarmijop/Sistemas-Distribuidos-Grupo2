@@ -12,13 +12,22 @@ import (
 )
 
 func main() {
+	// Configurar logging
+	gin.DefaultWriter = io.MultiWriter(os.Stdout, log.Writer())
+
+	// Inicializar configuración primero (incluye RabbitMQ)
+	config.InitConfig()
+
+	// Verificar la conexión RabbitMQ
+	if config.RabbitMQ == nil || config.RabbitMQ.Channel == nil {
+		log.Fatal("Error: RabbitMQ no se inicializó correctamente")
+	}
 
 	// Conectar a la base de datos
 	config.ConnectDB()
 
 	// Configuración del servidor
 	app := gin.Default()
-	gin.DefaultWriter = io.MultiWriter(os.Stdout, log.Writer())
 	app.Use(middleware.CorsMiddleware()) // Registrar middleware de CORS
 
 	// Configurar el router con las rutas definidas
@@ -26,8 +35,6 @@ func main() {
 
 	// Leer el puerto desde la variable de entorno o usar el valor por defecto
 	port := os.Getenv("APP_PORT")
-
-	//log.Printf("Servidor iniciado en el puerto %s", port)
 	if port == "" {
 		port = ":8081" // Valor por defecto, con el prefijo ':'
 	} else if port[0] != ':' {

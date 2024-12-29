@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"sensor-dron-nodo1/config"
 	"sensor-dron-nodo1/controllers"
 	"sensor-dron-nodo1/services"
@@ -9,8 +10,11 @@ import (
 )
 
 func InitDronRoutes(api *gin.RouterGroup) {
-	// Inicialización de servicios y controladores
-	dronService := services.NewDronService(config.DB)
+	if config.RabbitMQ == nil || config.RabbitMQ.Channel == nil {
+		log.Fatal("RabbitMQ no está inicializado correctamente")
+	}
+
+	dronService := services.NewDronService(config.DB, config.RabbitMQ.Channel)
 	dronController := controllers.NewDronController(dronService)
 
 	drones := api.Group("/dron")

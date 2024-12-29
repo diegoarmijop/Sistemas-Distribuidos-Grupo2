@@ -15,6 +15,7 @@ func SetupRouter() *gin.Engine {
 		InitNodoRoutes(api)
 		InitSensorRoutes(api)
 		InitRutaRoutes(api)
+
 	}
 
 	return router

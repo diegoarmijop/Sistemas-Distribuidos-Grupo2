@@ -1,11 +1,10 @@
 package controllers
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"sensor-dron-nodo1/models"
 	"sensor-dron-nodo1/services"
-
-	"github.com/gin-gonic/gin"
 )
 
 type NodoController struct {
