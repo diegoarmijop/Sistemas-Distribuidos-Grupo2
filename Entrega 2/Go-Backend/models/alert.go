@@ -13,8 +13,8 @@ type Alert struct {
 	TipoAlerta  string    `json:"tipo_alerta"`                        // Tipo de alerta
 	UsuarioID   uint      `json:"usuario_id"`                         // FK de Usuario
 	//MedicionID    uint      `json:"medicion_id"`                         // FK de Medición
-	EventoPlagaID uint `json:"evento_plaga_id"`                     // FK de Evento de Plaga
-	Usuario       User `gorm:"foreignKey:UsuarioID" json:"usuario"` // Relación con Usuario
+	EventoPlagaID *uint `json:"evento_plaga_id"`                     // FK de Evento de Plaga
+	Usuario       *User `gorm:"foreignKey:UsuarioID" json:"usuario"` // Relación con Usuario
 }
 
 // Esquema

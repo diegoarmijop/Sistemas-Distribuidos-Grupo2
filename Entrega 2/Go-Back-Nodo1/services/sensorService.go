@@ -89,7 +89,7 @@ func (service *SensorService) PublicarDatosSensor(dronID string) error {
 	// Generar datos del sensor con valores alterados para simular una situación crítica
 	sensorData := models.Sensor{
 		Temperatura: "42°C",    // Temperatura alta
-		Humedad:     "15%",     // Humedad crítica (bajo 20%)
+		Humedad:     "25%",     // Humedad crítica (bajo 20%)
 		Insectos:    "8",       // Alta presencia de insectos
 		Luz:         "950 lux", // Alta intensidad de luz
 	}

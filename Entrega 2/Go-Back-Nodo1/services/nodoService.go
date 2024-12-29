@@ -142,12 +142,12 @@ func (service *NodoService) ProcesarDron() {
 // EnviarAlerta estructura y envía una alerta a la base central
 func (service *NodoService) EnviarAlerta(data map[string]interface{}) {
 	alert := map[string]interface{}{
-		"estado":      "Crítico",
-		"descripcion": "Parámetros alterados detectados por el nodo.",
-		"fecha_hora":  time.Now().Format(time.RFC3339),
-		"tipo_alerta": "Sensor Crítico",
-		"nodo_id":     "Nodo-1",
-		"sensor_data": data,
+		"estado":          "Crítico",
+		"descripcion":     "Humedad extremadamente baja detectada en el campo.",
+		"fecha_hora":      "2024-12-29T12:00:00Z",
+		"tipo_alerta":     "Sensor Crítico",
+		"usuario_id":      1,
+		"evento_plaga_id": nil,
 	}
 
 	body, err := json.Marshal(alert)
@@ -156,7 +156,7 @@ func (service *NodoService) EnviarAlerta(data map[string]interface{}) {
 		return
 	}
 
-	resp, err := http.Post(service.BaseCentral+"/api/alerta", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post(service.BaseCentral+"/api/alertas/", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Error enviando alerta: %v", err)
 		return
