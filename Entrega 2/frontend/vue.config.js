@@ -1,13 +1,14 @@
 const { defineConfig } = require('@vue/cli-service')
+
 module.exports = defineConfig({
   transpileDependencies: [
     'vuetify'
-  ], 
+  ],
   devServer: {
-    port: 3000,
+    port: process.env.VUE_APP_PORT || 3000, // Usa la variable de entorno o un valor predeterminado
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VUE_APP_API_URL || 'http://localhost:8080', // Usa la variable de entorno o un valor predeterminado
         changeOrigin: true
       }
     }

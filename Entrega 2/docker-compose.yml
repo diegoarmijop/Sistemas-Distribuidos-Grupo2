@@ -20,11 +20,25 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
-    container_name: go-backend-backend-1
+    container_name: vue_frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - frontend_network
+    depends_on:
+      - backend_central
+    environment:
+      VUE_APP_API_URL: "http://localhost:8080"  # Aquí puedes configurar la URL del backend
+
+  backend_central:
+    build:
+      context: ./Go-Backend
+      dockerfile: Dockerfile
+    container_name: go_backend_central
     depends_on:
       db:
         condition: service_healthy
@@ -43,4 +57,6 @@ volumes:
 
 networks:
   backend_network:
+    driver: bridge
+  frontend_network:
     driver: bridge
