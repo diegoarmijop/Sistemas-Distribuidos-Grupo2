@@ -132,7 +132,7 @@
         color: 'success'
       },
       menuItems: [
-        { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/dashboard' },
+        { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/alertas' },
         { title: 'Usuarios', icon: 'mdi-account-group', path: '/users' },
         { title: 'Sectores', icon: 'mdi-seed', path: '/sectors' },
         { title: 'Reportes', icon: 'mdi-chart-bar', path: '/reportes' },
