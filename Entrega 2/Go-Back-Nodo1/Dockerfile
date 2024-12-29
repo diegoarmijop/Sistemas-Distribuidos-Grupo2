@@ -9,6 +9,11 @@ COPY . .
 
 RUN go build -o main .
 
-EXPOSE 8081
+# Exponer rango de puertos
+EXPOSE 8081-8091
 
-CMD ["./main"]
+# Copiar el script de entrada para manejar variables dinámicas
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]

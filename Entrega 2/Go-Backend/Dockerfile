@@ -2,13 +2,19 @@ FROM golang:1.23.4-alpine
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY go.mod go.sum ./ 
 RUN go mod download
 
-COPY . .
+COPY . . 
 
 RUN go build -o main .
 
+# Exponer el puerto 8080
 EXPOSE 8080
 
-CMD ["./main"]
+# Copiar el script de entrada
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Usar el script como comando por defecto
+CMD ["/entrypoint.sh"]

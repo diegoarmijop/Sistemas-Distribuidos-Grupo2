@@ -147,7 +147,6 @@ INSERT INTO alert (estado, descripcion, fecha_hora, tipo_alerta, usuario_id, eve
 ('Pendiente', 'Posible riesgo de infestación', '2024-01-15 13:45:00', 'Información', 6, 6);
 
 -- Insertar mediciones
--- Insertar mediciones
 INSERT INTO medicion (fecha_hora, temperatura, humedad, luminosidad, sensor_id) VALUES
 ('2024-01-10 08:00:00', 25.5, 60.0, 700.0, 1),
 ('2024-01-11 09:00:00', 26.0, 65.0, 750.0, 2),
