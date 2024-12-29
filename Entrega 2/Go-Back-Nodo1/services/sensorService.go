@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"sensor-dron-nodo1/models"
 	"strconv"
@@ -85,19 +86,10 @@ func (service *SensorService) randomValue(min, max int) string {
 	return strconv.Itoa(rand.Intn(max-min) + min)
 }
 
-func (service *SensorService) PublicarDatosSensor(dronID string) error {
-	// Generar datos del sensor con valores alterados para simular una situación crítica
-	sensorData := models.Sensor{
-		Temperatura: "42°C",    // Temperatura alta
-		Humedad:     "25%",     // Humedad crítica (bajo 20%)
-		Insectos:    "8",       // Alta presencia de insectos
-		Luz:         "950 lux", // Alta intensidad de luz
-	}
+func (service *SensorService) PublicarDatosSensor(sensor models.Sensor, sensorID string) error {
+	queueName := "sensor." + sensorID
 
-	// Publicar datos al dron
-	queueName := "sensor." + dronID
-
-	// Crear la cola si no existe
+	// Declarar la cola si no existe
 	_, err := service.RabbitMQ.QueueDeclare(
 		queueName,
 		true,  // durable
@@ -107,16 +99,16 @@ func (service *SensorService) PublicarDatosSensor(dronID string) error {
 		nil,   // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("error declarando cola: %v", err)
+		return fmt.Errorf("error declarando cola del sensor: %v", err)
 	}
 
-	// Preparar mensaje para el dron
-	body, err := json.Marshal(sensorData)
+	// Serializar los datos del sensor
+	body, err := json.Marshal(sensor)
 	if err != nil {
 		return fmt.Errorf("error serializando datos del sensor: %v", err)
 	}
 
-	// Publicar mensaje en la cola del sensor
+	// Publicar los datos en la cola del sensor
 	err = service.RabbitMQ.Publish(
 		"",        // exchange
 		queueName, // routing key
@@ -131,5 +123,6 @@ func (service *SensorService) PublicarDatosSensor(dronID string) error {
 		return fmt.Errorf("error publicando mensaje: %v", err)
 	}
 
+	log.Printf("Datos del sensor %s publicados en la cola %s: %+v", sensorID, queueName, sensor)
 	return nil
 }

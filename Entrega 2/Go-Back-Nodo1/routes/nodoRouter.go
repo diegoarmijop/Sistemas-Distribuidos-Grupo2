@@ -1,11 +1,12 @@
 package routes
 
 import (
+	"os"
+
+	"github.com/gin-gonic/gin"
 	"sensor-dron-nodo1/config"
 	"sensor-dron-nodo1/controllers"
 	"sensor-dron-nodo1/services"
-
-	"github.com/gin-gonic/gin"
 )
 
 func InitNodoRoutes(api *gin.RouterGroup) {
@@ -13,7 +14,7 @@ func InitNodoRoutes(api *gin.RouterGroup) {
 	rutaService := services.NewRutaService(config.DB)
 
 	// Inicialización del servicio NodoService con RabbitMQ, BaseCentral, y RutaService
-	nodoService := services.NewNodoService(config.DB, config.RabbitMQ.Channel, config.BaseCentral, rutaService)
+	nodoService := services.NewNodoService(config.DB, config.RabbitMQ.Channel, os.Getenv("BASE_CENTRAL_URL"), rutaService)
 	nodoController := controllers.NewNodoController(nodoService)
 
 	nodos := api.Group("/nodo")

@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"sensor-dron-nodo1/models"
 
@@ -23,16 +24,17 @@ func (service *DronService) CrearDron(dron *models.Dron) error {
 	return service.DB.Create(dron).Error
 }
 
-// ObtenerTodosDrones obtiene todos los drones
+// ObtenerTodosDrones obtiene todos los drones, incluyendo sus rutas asociadas
 func (service *DronService) ObtenerTodosDrones() ([]models.Dron, error) {
 	var drones []models.Dron
-	err := service.DB.Find(&drones).Error
-	return drones, err
+	if err := service.DB.Preload("RutaActual").Find(&drones).Error; err != nil {
+		return nil, err
+	}
+	return drones, nil
 }
 
-// ObtenerDronPorID obtiene un dron por su ID
 func (service *DronService) ObtenerDronPorID(id string, dron *models.Dron) error {
-	return service.DB.First(dron, "id = ?", id).Error
+	return service.DB.Preload("RutaActual").First(dron, "id = ?", id).Error
 }
 
 // ActualizarDron actualiza un dron existente
@@ -45,15 +47,15 @@ func (service *DronService) EliminarDron(id string) error {
 	return service.DB.Delete(&models.Dron{}, "id = ?", id).Error
 }
 
-// ProcesarDatosSensor consume datos de sensores y los envía al nodo local
-func (service *DronService) ProcesarDatosSensor(sensorID string, dronID string) {
+// ProcesarDatosSensor permite que cualquier dron disponible procese datos de un sensor
+func (service *DronService) ProcesarDatosSensor(sensorID string) {
 	queueName := "sensor." + sensorID
 
 	// Declarar la cola si no existe
 	_, err := service.RabbitMQ.QueueDeclare(
 		queueName,
 		true,  // durable
-		false, // delete when unused
+		false, // auto-delete
 		false, // exclusive
 		false, // no-wait
 		nil,   // arguments
@@ -77,7 +79,7 @@ func (service *DronService) ProcesarDatosSensor(sensorID string, dronID string) 
 		return
 	}
 
-	log.Printf("Dron %s esperando mensajes del sensor %s...", dronID, sensorID)
+	log.Printf("Dron escuchando mensajes del sensor %s...", sensorID)
 
 	go func() {
 		for msg := range msgs {
@@ -87,17 +89,24 @@ func (service *DronService) ProcesarDatosSensor(sensorID string, dronID string) 
 				continue
 			}
 
-			log.Printf("Dron %s recibió datos: %+v", dronID, sensor)
+			// Buscar un dron disponible
+			var dron models.Dron
+			if err := service.DB.Where("estado = ?", "activo").First(&dron).Error; err != nil {
+				log.Printf("No hay drones disponibles para procesar el mensaje del sensor %s", sensorID)
+				continue
+			}
+
+			log.Printf("Dron %d procesando datos del sensor %s: %+v", dron.ID, sensorID, sensor)
 
 			// Reenviar al nodo local
-			service.EnviarANodoLocal(sensor, dronID)
+			service.EnviarANodoLocal(sensor, fmt.Sprintf("%d", dron.ID))
 		}
 	}()
 }
 
-// EnviarANodoLocal publica datos en la cola del nodo local
 func (service *DronService) EnviarANodoLocal(sensor models.Sensor, dronID string) {
 	queueName := "nodo.local"
+
 	body, err := json.Marshal(map[string]interface{}{
 		"dron_id": dronID,
 		"sensor":  sensor,
@@ -115,6 +124,8 @@ func (service *DronService) EnviarANodoLocal(sensor models.Sensor, dronID string
 		},
 	)
 	if err != nil {
-		log.Printf("Error publicando mensaje: %v", err)
+		log.Printf("Error publicando mensaje al nodo local: %v", err)
+	} else {
+		log.Printf("Dron %s publicó datos al nodo local: %+v", dronID, sensor)
 	}
 }

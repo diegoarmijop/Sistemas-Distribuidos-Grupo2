@@ -30,10 +30,11 @@ func InitSensorRoutes(api *gin.RouterGroup) {
 		sensores.GET("/", sensorController.ObtenerTodosSensores)
 		sensores.PUT("/:id", sensorController.ActualizarSensor)
 		sensores.DELETE("/:id", sensorController.EliminarSensor)
-		sensores.POST("/publicar/:dronId", func(c *gin.Context) {
-			dronID := c.Param("dronId")
-			// Inicia el procesamiento del dron para este sensor
-			go dronService.ProcesarDatosSensor("1", dronID) // "1" es el ID del sensor
+		sensores.POST("/publicar/:sensorId", func(c *gin.Context) {
+			sensorID := c.Param("sensorId")
+
+			// Inicia el procesamiento de datos del sensor
+			go dronService.ProcesarDatosSensor(sensorID) // Ahora solo enviamos el sensorID
 			sensorController.PublicarDatosSensor(c)
 		})
 	}

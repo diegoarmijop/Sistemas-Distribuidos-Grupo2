@@ -55,7 +55,7 @@ func (service *NodoService) EliminarNodo(id string) error {
 // CrearRuta genera una nueva ruta y la asigna a un dron
 func (service *NodoService) CrearRuta(sensor models.Sensor, dronID string) error {
 	// Convertir dronID de string a uint
-	dronIDUint, err := strconv.ParseUint("8", 10, 32)
+	dronIDUint, err := strconv.ParseUint(dronID, 10, 32)
 	if err != nil {
 		return fmt.Errorf("error al convertir dronID a uint: %v", err)
 	}
@@ -73,12 +73,12 @@ func (service *NodoService) CrearRuta(sensor models.Sensor, dronID string) error
 
 	// Actualizar el dron con la ruta asignada
 	if err := service.DB.Model(&models.Dron{}).
-		Where("id = ?", uint(dronIDUint)). // Usar uint aquí
+		Where("id = ?", uint(dronIDUint)).
 		Update("ruta_id", nuevaRuta.ID).Error; err != nil {
 		return fmt.Errorf("error asignando ruta al dron: %v", err)
 	}
 
-	log.Printf("Ruta creada y asignada exitosamente: %+v", nuevaRuta)
+	log.Printf("Ruta creada y asignada exitosamente al dron %d: %+v", dronIDUint, nuevaRuta)
 	return nil
 }
 
@@ -91,19 +91,16 @@ func (service *NodoService) ProcesarSensor(sensor models.Sensor, dronID string) 
 	}
 
 	if humedad < 20 {
-		log.Println("Humedad baja detectada, generando una ruta...")
+		log.Println("Humedad baja detectada, generando una ruta para el dron ...", dronID)
 		if err := service.CrearRuta(sensor, dronID); err != nil {
 			log.Printf("Error generando la ruta: %v", err)
 		}
 	} else {
-		log.Println("Parámetros normales, enviando alerta crítica...")
-		service.EnviarAlerta(map[string]interface{}{
-			"sensor": sensor,
-		})
+		log.Println("Parámetros críticos, enviando alerta...")
+		service.EnviarAlerta(sensor, 1, nil)
 	}
 }
 
-// ProcesarDron consume mensajes de la cola del nodo local
 func (service *NodoService) ProcesarDron() {
 	queueName := "nodo.local"
 	msgs, err := service.RabbitMQ.Consume(
@@ -120,11 +117,21 @@ func (service *NodoService) ProcesarDron() {
 			continue
 		}
 
-		log.Printf("Nodo local recibió: %+v", payload)
+		log.Printf("Nodo local recibió datos: %+v", payload)
 
-		// Procesar datos del sensor
-		sensorData := payload["sensor"].(map[string]interface{})
-		dronID := payload["dron_id"].(string)
+		// Validar y obtener `dron_id`
+		dronID, ok := payload["dron_id"].(string)
+		if !ok || dronID == "" {
+			log.Printf("Error: dron_id no está presente o no es válido")
+			continue
+		}
+
+		// Validar y obtener `sensor`
+		sensorData, ok := payload["sensor"].(map[string]interface{})
+		if !ok || sensorData == nil {
+			log.Printf("Error: sensor no está presente o no es válido")
+			continue
+		}
 
 		// Convertir datos del sensor
 		sensor := models.Sensor{
@@ -140,22 +147,30 @@ func (service *NodoService) ProcesarDron() {
 }
 
 // EnviarAlerta estructura y envía una alerta a la base central
-func (service *NodoService) EnviarAlerta(data map[string]interface{}) {
+func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, eventoPlagaID *uint) {
+	// Generar descripción dinámica según los datos del sensor
+	descripcion := fmt.Sprintf(
+		"Alerta generada por parámetros alterados: Temperatura: %s, Humedad: %s, Insectos: %s, Luz: %s",
+		sensor.Temperatura, sensor.Humedad, sensor.Insectos, sensor.Luz,
+	)
+
 	alert := map[string]interface{}{
 		"estado":          "Crítico",
-		"descripcion":     "Humedad extremadamente baja detectada en el campo.",
-		"fecha_hora":      "2024-12-29T12:00:00Z",
-		"tipo_alerta":     "Sensor Crítico",
-		"usuario_id":      1,
-		"evento_plaga_id": nil,
+		"descripcion":     descripcion,
+		"fecha_hora":      time.Now().Format(time.RFC3339),
+		"tipo_alerta":     "Parámetros Alterados",
+		"usuario_id":      usuarioID,
+		"evento_plaga_id": eventoPlagaID,
 	}
 
+	// Serializar la alerta
 	body, err := json.Marshal(alert)
 	if err != nil {
 		log.Printf("Error serializando alerta: %v", err)
 		return
 	}
 
+	// Enviar la alerta al backend de la casa central
 	resp, err := http.Post(service.BaseCentral+"/api/alertas/", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Error enviando alerta: %v", err)

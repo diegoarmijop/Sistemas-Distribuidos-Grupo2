@@ -77,23 +77,20 @@ func (controller *SensorController) EliminarSensor(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Sensor eliminado exitosamente"})
 }
 
-// PublicarDatosSensor maneja la publicación de datos del sensor para un dron
 func (controller *SensorController) PublicarDatosSensor(c *gin.Context) {
-	dronID := c.Param("dronId")
-	if dronID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID del dron es requerido"})
+	sensorID := c.Param("sensorId") // Tomar el ID del sensor de la URL
+
+	var sensor models.Sensor
+	if err := c.ShouldBindJSON(&sensor); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos: " + err.Error()})
 		return
 	}
 
-	err := controller.SensorService.PublicarDatosSensor(dronID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error al publicar datos del sensor: " + err.Error(),
-		})
+	// Publicar los datos del sensor en RabbitMQ
+	if err := controller.SensorService.PublicarDatos(sensor, sensorID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error publicando datos del sensor: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Datos del sensor publicados exitosamente para el dron " + dronID,
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "Datos publicados exitosamente"})
 }
