@@ -11,7 +11,7 @@ DB_SSLMODE=${DB_SSLMODE:-disable}
 DB_TIMEZONE=${DB_TIMEZONE:-UTC}
 APP_PORT=${PORT:-8081}
 RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/}
-BASE_CENTRAL_URL=${BASE_CENTRAL_URL:-http://localhost:8080}
+BASE_CENTRAL_URL=${BASE_CENTRAL_URL:-http://backend_central:8080}
 EOF
 
 # Mostrar el contenido del .env para verificarlo (opcional)
