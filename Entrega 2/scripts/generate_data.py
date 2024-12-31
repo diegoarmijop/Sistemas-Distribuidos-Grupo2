@@ -28,7 +28,7 @@ def simulate_sensors():
         for sensor_id in sensor_ids:
             data = generate_sensor_data()
             send_to_sensor(sensor_id, data)
-            time.sleep(2)  # Esperar 2 segundos entre envíos
+            time.sleep(2)  # Esperar 2 segundos entre envíos.
         print("\n--- Nueva ronda de datos ---\n")
 
 if __name__ == "__main__":
