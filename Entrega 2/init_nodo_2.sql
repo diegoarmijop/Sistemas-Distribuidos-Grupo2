@@ -47,4 +47,5 @@ INSERT INTO ruta (fecha_hora_inicio, fecha_hora_termino, flag_dron) VALUES
 
 -- Insertar datos de ejemplo en "dron"
 INSERT INTO dron (estado, modelo, ubicacion, ruta_id) VALUES
-('En espera', 'Modelo B', 'Ubicación Dron 2', 1);
+('activo', 'DJI-002', 'Sur', 1);
+

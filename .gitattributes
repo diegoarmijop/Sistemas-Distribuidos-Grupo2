@@ -1,0 +1,3 @@
+# Forzar LF en todos los scripts del proyecto
+*.sh text eol=lf
+*.env text eol=lf
