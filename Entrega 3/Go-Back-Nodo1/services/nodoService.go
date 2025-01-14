@@ -150,7 +150,7 @@ func (service *NodoService) ProcesarSensor(sensor models.Sensor, dronID string) 
 		return
 	}
 	switch {
-	case luz > 12:
+	case luz > 11:
 		mensajes = append(mensajes, "Nivel de luz extremadamente alto: peligro extremo.")
 	case luz > 8:
 		mensajes = append(mensajes, "Nivel de luz alto: riesgo crítico de exposición.")
@@ -257,7 +257,8 @@ func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, e
 	if temperatura > 36 {
 		tipoAlertas = append(tipoAlertas, "Temperatura alta")
 		parametrosAltos++
-	} else if temperatura < 5 {
+	}
+	if temperatura < 5 {
 		tipoAlertas = append(tipoAlertas, "Temperatura baja")
 		parametrosAltos++
 	}
@@ -271,7 +272,7 @@ func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, e
 
 	// 4. Evaluar Luz
 	luz, _ := strconv.Atoi(sensor.Luz[:len(sensor.Luz)-2])
-	if luz > 15 {
+	if luz > 11 {
 		tipoAlertas = append(tipoAlertas, "Nivel de luz extremadamente alto")
 		parametrosAltos++
 	} else if luz > 8 {
