@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sensor-dron-nodo1/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -84,21 +85,108 @@ func (service *NodoService) CrearRuta(sensor models.Sensor, dronID string) error
 
 // ProcesarSensor analiza los datos de un sensor y toma decisiones
 func (service *NodoService) ProcesarSensor(sensor models.Sensor, dronID string) {
-	humedad, err := strconv.Atoi(sensor.Humedad[:len(sensor.Humedad)-1]) // Convertir "15%" a 15
+	// Inicializar el mensaje final
+	var mensajes []string
+
+	// Procesar Humedad
+	humedad, err := strconv.Atoi(sensor.Humedad[:len(sensor.Humedad)-1]) // Convertir "60%" a 60
 	if err != nil {
 		log.Printf("Error al procesar la humedad: %v", err)
 		return
 	}
-
-	if humedad < 20 {
+	switch {
+	case humedad < 20:
+		mensajes = append(mensajes, "Humedad extremadamente baja: riesgo crítico.")
 		log.Println("Humedad baja detectada, generando una ruta para el dron ...", dronID)
 		if err := service.CrearRuta(sensor, dronID); err != nil {
 			log.Printf("Error generando la ruta: %v", err)
 		}
-	} else {
-		log.Println("Parámetros críticos, enviando alerta...")
-		service.EnviarAlerta(sensor, 1, nil)
+	case humedad >= 20 && humedad <= 40:
+		mensajes = append(mensajes, "Humedad baja: requiere monitoreo.")
+	case humedad > 40 && humedad <= 70:
+		mensajes = append(mensajes, "Humedad adecuada.")
+	default:
+		mensajes = append(mensajes, "Humedad alta: riesgo crítico de saturación.")
 	}
+
+	// Procesar Temperatura
+	temperaturaStr := strings.TrimRight(sensor.Temperatura, "°C") // Remover caracteres "°C"
+	temperatura, err := strconv.Atoi(temperaturaStr)              // Convertir a entero
+	if err != nil {
+		log.Printf("Error al procesar la temperatura: %v", err)
+		return
+	}
+	switch {
+	case temperatura > 40:
+		mensajes = append(mensajes, "Temperatura extremadamente alta: peligro extremo.")
+	case temperatura > 36:
+		mensajes = append(mensajes, "Temperatura alta: riesgo crítico de calor.")
+	case temperatura < 5:
+		mensajes = append(mensajes, "Temperatura baja: riesgo de hipotermia.")
+	default:
+		mensajes = append(mensajes, "Temperatura adecuada.")
+	}
+
+	// Procesar Insectos
+	var insectosMensaje string
+	switch sensor.Insectos {
+	case "bajo":
+		insectosMensaje = "Nivel bajo de insectos: sin riesgo."
+	case "medio":
+		insectosMensaje = "Nivel medio de insectos: requiere monitoreo."
+	case "alto":
+		insectosMensaje = "Nivel alto de insectos: riesgo crítico significativo."
+	case "abundancia peligrosa":
+		insectosMensaje = "Nivel extremadamente alto de insectos: peligro extremo."
+	default:
+		insectosMensaje = "Nivel de insectos desconocido."
+	}
+	mensajes = append(mensajes, insectosMensaje)
+
+	// Procesar Luz
+	luz, err := strconv.Atoi(sensor.Luz[:len(sensor.Luz)-2]) // Convertir "10UV" a 10
+	if err != nil {
+		log.Printf("Error al procesar la luz: %v", err)
+		return
+	}
+	switch {
+	case luz > 12:
+		mensajes = append(mensajes, "Nivel de luz extremadamente alto: peligro extremo.")
+	case luz > 8:
+		mensajes = append(mensajes, "Nivel de luz alto: riesgo crítico de exposición.")
+	case luz < 3:
+		mensajes = append(mensajes, "Nivel de luz bajo: posible riesgo de fotosíntesis insuficiente.")
+	default:
+		mensajes = append(mensajes, "Nivel de luz adecuado.")
+	}
+
+	// Armar el mensaje final
+	mensajeFinal := fmt.Sprintf("Evaluación de sensor:\n- %s",
+		strings.Join(mensajes, "\n- "))
+
+	// Log del mensaje final
+	log.Println(mensajeFinal)
+
+	// Si hay parámetros críticos, enviar alerta
+	if containsCriticalConditions(mensajes) {
+		log.Println("Se detectaron condiciones críticas, enviando alerta...")
+		service.EnviarAlerta(sensor, 1, nil)
+	} else {
+		log.Println("Se detectaron parámetros medianamente alterados, generando una ruta de solución para el dron ...", dronID)
+		if err := service.CrearRuta(sensor, dronID); err != nil {
+			log.Printf("Error generando la ruta: %v", err)
+		}
+	}
+}
+
+// Función auxiliar para determinar si hay condiciones críticas en los mensajes
+func containsCriticalConditions(mensajes []string) bool {
+	for _, mensaje := range mensajes {
+		if strings.Contains(mensaje, "riesgo crítico") || strings.Contains(mensaje, "peligro extremo") {
+			return true
+		}
+	}
+	return false
 }
 
 func (service *NodoService) ProcesarDron() {
@@ -147,18 +235,72 @@ func (service *NodoService) ProcesarDron() {
 }
 
 // EnviarAlerta estructura y envía una alerta a la base central
+// EnviarAlerta estructura y envía una alerta a la base central
 func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, eventoPlagaID *uint) {
-	// Generar descripción dinámica según los datos del sensor
+	// Inicializar variables para determinar el estado y el tipo de alerta
+	var (
+		estado          string
+		tipoAlertas     []string
+		parametrosAltos int
+	)
+
+	// Evaluar cada parámetro para determinar criticidad
+	// 1. Evaluar Humedad
+	humedad, _ := strconv.Atoi(sensor.Humedad[:len(sensor.Humedad)-1])
+	if humedad < 20 || humedad > 70 {
+		tipoAlertas = append(tipoAlertas, "Humedad baja-alta")
+		parametrosAltos++
+	}
+
+	// 2. Evaluar Temperatura
+	temperatura, _ := strconv.Atoi(sensor.Temperatura[:len(sensor.Temperatura)-2])
+	if temperatura > 36 {
+		tipoAlertas = append(tipoAlertas, "Temperatura alta")
+		parametrosAltos++
+	} else if temperatura < 5 {
+		tipoAlertas = append(tipoAlertas, "Temperatura baja")
+		parametrosAltos++
+	}
+
+	// 3. Evaluar Insectos
+	switch sensor.Insectos {
+	case "alto", "abundancia peligrosa":
+		tipoAlertas = append(tipoAlertas, "Nivel alto de insectos")
+		parametrosAltos++
+	}
+
+	// 4. Evaluar Luz
+	luz, _ := strconv.Atoi(sensor.Luz[:len(sensor.Luz)-2])
+	if luz > 15 {
+		tipoAlertas = append(tipoAlertas, "Nivel de luz extremadamente alto")
+		parametrosAltos++
+	} else if luz > 8 {
+		tipoAlertas = append(tipoAlertas, "Nivel de luz alto")
+		parametrosAltos++
+	}
+
+	// Determinar el estado en función de los parámetros críticos
+	switch {
+	case parametrosAltos == 1:
+		estado = "Seria"
+	case parametrosAltos == 2:
+		estado = "Crítico"
+	case parametrosAltos > 2:
+		estado = "Extremo Peligro"
+	}
+
+	// Crear la descripción de la alerta
 	descripcion := fmt.Sprintf(
-		"Alerta generada por parámetros alterados: Temperatura: %s, Humedad: %s, Insectos: %s, Luz: %s",
+		"Temperatura: %s, Humedad: %s, Insectos: %s, Luz: %s",
 		sensor.Temperatura, sensor.Humedad, sensor.Insectos, sensor.Luz,
 	)
 
+	// Mapear la alerta para enviar al backend
 	alert := map[string]interface{}{
-		"estado":          "Crítico",
+		"estado":          estado,
 		"descripcion":     descripcion,
 		"fecha_hora":      time.Now().Format(time.RFC3339),
-		"tipo_alerta":     "Parámetros Alterados",
+		"tipo_alerta":     strings.Join(tipoAlertas, "/"),
 		"usuario_id":      usuarioID,
 		"evento_plaga_id": eventoPlagaID,
 	}
@@ -178,6 +320,7 @@ func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, e
 	}
 	defer resp.Body.Close()
 
+	// Manejar la respuesta del backend
 	if resp.StatusCode == http.StatusOK {
 		log.Printf("Alerta enviada con éxito. Código HTTP: %d", resp.StatusCode)
 	} else {
