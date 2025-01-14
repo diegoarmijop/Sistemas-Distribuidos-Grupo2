@@ -55,7 +55,6 @@ func (service *NodoService) EliminarNodo(id string) error {
 
 // CrearRuta genera una nueva ruta y la asigna a un dron
 func (service *NodoService) CrearRuta(sensor models.Sensor, dronID string) error {
-	// Convertir dronID de string a uint
 	dronIDUint, err := strconv.ParseUint(dronID, 10, 32)
 	if err != nil {
 		return fmt.Errorf("error al convertir dronID a uint: %v", err)
@@ -63,16 +62,14 @@ func (service *NodoService) CrearRuta(sensor models.Sensor, dronID string) error
 
 	nuevaRuta := models.Ruta{
 		FechaHoraInicio:  time.Now(),
-		FechaHoraTermino: time.Now().Add(1 * time.Hour), // Duración estimada de 1 hora
-		FlagDron:         fmt.Sprintf("%d", dronIDUint), // Almacenar como string en la ruta
+		FechaHoraTermino: time.Now().Add(1 * time.Hour),
+		FlagDron:         fmt.Sprintf("%d", dronIDUint),
 	}
 
-	// Guardar la ruta usando RutaService
 	if err := service.RutaService.CrearRuta(&nuevaRuta); err != nil {
 		return fmt.Errorf("error creando la ruta: %v", err)
 	}
 
-	// Actualizar el dron con la ruta asignada
 	if err := service.DB.Model(&models.Dron{}).
 		Where("id = ?", uint(dronIDUint)).
 		Update("ruta_id", nuevaRuta.ID).Error; err != nil {
@@ -85,15 +82,15 @@ func (service *NodoService) CrearRuta(sensor models.Sensor, dronID string) error
 
 // ProcesarSensor analiza los datos de un sensor y toma decisiones
 func (service *NodoService) ProcesarSensor(sensor models.Sensor, dronID string) {
-	// Inicializar el mensaje final
 	var mensajes []string
 
 	// Procesar Humedad
-	humedad, err := strconv.Atoi(sensor.Humedad[:len(sensor.Humedad)-1]) // Convertir "60%" a 60
+	humedad, err := strconv.Atoi(strings.TrimRight(sensor.Humedad, "%"))
 	if err != nil {
 		log.Printf("Error al procesar la humedad: %v", err)
 		return
 	}
+
 	switch {
 	case humedad < 20:
 		mensajes = append(mensajes, "Humedad extremadamente baja: riesgo crítico.")
@@ -110,45 +107,46 @@ func (service *NodoService) ProcesarSensor(sensor models.Sensor, dronID string) 
 	}
 
 	// Procesar Temperatura
-	temperaturaStr := strings.TrimRight(sensor.Temperatura, "°C") // Remover caracteres "°C"
-	temperatura, err := strconv.Atoi(temperaturaStr)              // Convertir a entero
+	temperaturaStr := strings.TrimRight(sensor.Temperatura, "°C")
+	temperatura, err := strconv.Atoi(temperaturaStr)
 	if err != nil {
 		log.Printf("Error al procesar la temperatura: %v", err)
 		return
 	}
+
 	switch {
-	case temperatura > 40:
+	case temperatura > 30:
 		mensajes = append(mensajes, "Temperatura extremadamente alta: peligro extremo.")
-	case temperatura > 36:
+	case temperatura > 25:
 		mensajes = append(mensajes, "Temperatura alta: riesgo crítico de calor.")
-	case temperatura < 5:
+	case temperatura < 15:
 		mensajes = append(mensajes, "Temperatura baja: riesgo de hipotermia.")
 	default:
 		mensajes = append(mensajes, "Temperatura adecuada.")
 	}
 
 	// Procesar Insectos
-	var insectosMensaje string
-	switch sensor.Insectos {
+	switch strings.ToLower(sensor.Insectos) {
 	case "bajo":
-		insectosMensaje = "Nivel bajo de insectos: sin riesgo."
+		mensajes = append(mensajes, "Nivel bajo de insectos: sin riesgo.")
 	case "medio":
-		insectosMensaje = "Nivel medio de insectos: requiere monitoreo."
+		mensajes = append(mensajes, "Nivel medio de insectos: requiere monitoreo.")
 	case "alto":
-		insectosMensaje = "Nivel alto de insectos: riesgo crítico significativo."
+		mensajes = append(mensajes, "Nivel alto de insectos: riesgo crítico significativo.")
 	case "abundancia peligrosa":
-		insectosMensaje = "Nivel extremadamente alto de insectos: peligro extremo."
+		mensajes = append(mensajes, "Nivel extremadamente alto de insectos: peligro extremo.")
 	default:
-		insectosMensaje = "Nivel de insectos desconocido."
+		mensajes = append(mensajes, "Nivel de insectos desconocido.")
 	}
-	mensajes = append(mensajes, insectosMensaje)
 
 	// Procesar Luz
-	luz, err := strconv.Atoi(sensor.Luz[:len(sensor.Luz)-2]) // Convertir "10UV" a 10
+	luzStr := strings.TrimRight(sensor.Luz, "UV")
+	luz, err := strconv.Atoi(luzStr)
 	if err != nil {
 		log.Printf("Error al procesar la luz: %v", err)
 		return
 	}
+
 	switch {
 	case luz > 11:
 		mensajes = append(mensajes, "Nivel de luz extremadamente alto: peligro extremo.")
@@ -160,14 +158,11 @@ func (service *NodoService) ProcesarSensor(sensor models.Sensor, dronID string) 
 		mensajes = append(mensajes, "Nivel de luz adecuado.")
 	}
 
-	// Armar el mensaje final
 	mensajeFinal := fmt.Sprintf("Evaluación de sensor:\n- %s",
 		strings.Join(mensajes, "\n- "))
 
-	// Log del mensaje final
 	log.Println(mensajeFinal)
 
-	// Si hay parámetros críticos, enviar alerta
 	if containsCriticalConditions(mensajes) {
 		log.Println("Se detectaron condiciones críticas, enviando alerta...")
 		service.EnviarAlerta(sensor, 1, nil)
@@ -179,7 +174,6 @@ func (service *NodoService) ProcesarSensor(sensor models.Sensor, dronID string) 
 	}
 }
 
-// Función auxiliar para determinar si hay condiciones críticas en los mensajes
 func containsCriticalConditions(mensajes []string) bool {
 	for _, mensaje := range mensajes {
 		if strings.Contains(mensaje, "riesgo crítico") || strings.Contains(mensaje, "peligro extremo") {
@@ -207,21 +201,18 @@ func (service *NodoService) ProcesarDron() {
 
 		log.Printf("Nodo local recibió datos: %+v", payload)
 
-		// Validar y obtener `dron_id`
 		dronID, ok := payload["dron_id"].(string)
 		if !ok || dronID == "" {
 			log.Printf("Error: dron_id no está presente o no es válido")
 			continue
 		}
 
-		// Validar y obtener `sensor`
 		sensorData, ok := payload["sensor"].(map[string]interface{})
 		if !ok || sensorData == nil {
 			log.Printf("Error: sensor no está presente o no es válido")
 			continue
 		}
 
-		// Convertir datos del sensor
 		sensor := models.Sensor{
 			Temperatura: sensorData["temperatura"].(string),
 			Humedad:     sensorData["humedad"].(string),
@@ -229,49 +220,55 @@ func (service *NodoService) ProcesarDron() {
 			Luz:         sensorData["luz"].(string),
 		}
 
-		// Llamar a ProcesarSensor
 		service.ProcesarSensor(sensor, dronID)
 	}
 }
 
-// EnviarAlerta estructura y envía una alerta a la base central
-// EnviarAlerta estructura y envía una alerta a la base central
 func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, eventoPlagaID *uint) {
-	// Inicializar variables para determinar el estado y el tipo de alerta
 	var (
 		estado          string
 		tipoAlertas     []string
 		parametrosAltos int
 	)
 
-	// Evaluar cada parámetro para determinar criticidad
-	// 1. Evaluar Humedad
-	humedad, _ := strconv.Atoi(sensor.Humedad[:len(sensor.Humedad)-1])
+	// Evaluar Humedad
+	humedad, _ := strconv.Atoi(strings.TrimRight(sensor.Humedad, "%"))
 	if humedad < 20 || humedad > 70 {
 		tipoAlertas = append(tipoAlertas, "Humedad baja-alta")
 		parametrosAltos++
 	}
 
-	// 2. Evaluar Temperatura
-	temperatura, _ := strconv.Atoi(sensor.Temperatura[:len(sensor.Temperatura)-2])
-	if temperatura > 36 {
+	// Evaluar Temperatura
+	temperaturaStr := strings.TrimRight(sensor.Temperatura, "°C")
+	temperatura, err := strconv.Atoi(temperaturaStr)
+	if err != nil {
+		log.Printf("Error al procesar temperatura: %v", err)
+		return
+	}
+
+	if temperatura > 30 {
 		tipoAlertas = append(tipoAlertas, "Temperatura alta")
 		parametrosAltos++
-	}
-	if temperatura < 5 {
+	} else if temperatura < 15 {
 		tipoAlertas = append(tipoAlertas, "Temperatura baja")
 		parametrosAltos++
 	}
 
-	// 3. Evaluar Insectos
-	switch sensor.Insectos {
+	// Evaluar Insectos
+	switch strings.ToLower(sensor.Insectos) {
 	case "alto", "abundancia peligrosa":
 		tipoAlertas = append(tipoAlertas, "Nivel alto de insectos")
 		parametrosAltos++
 	}
 
-	// 4. Evaluar Luz
-	luz, _ := strconv.Atoi(sensor.Luz[:len(sensor.Luz)-2])
+	// Evaluar Luz
+	luzStr := strings.TrimRight(sensor.Luz, "UV")
+	luz, err := strconv.Atoi(luzStr)
+	if err != nil {
+		log.Printf("Error al procesar luz: %v", err)
+		return
+	}
+
 	if luz > 11 {
 		tipoAlertas = append(tipoAlertas, "Nivel de luz extremadamente alto")
 		parametrosAltos++
@@ -280,8 +277,10 @@ func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, e
 		parametrosAltos++
 	}
 
-	// Determinar el estado en función de los parámetros críticos
+	// Determinar estado
 	switch {
+	case parametrosAltos == 0:
+		estado = "Normal"
 	case parametrosAltos == 1:
 		estado = "Seria"
 	case parametrosAltos == 2:
@@ -290,41 +289,39 @@ func (service *NodoService) EnviarAlerta(sensor models.Sensor, usuarioID uint, e
 		estado = "Extremo Peligro"
 	}
 
-	// Crear la descripción de la alerta
-	descripcion := fmt.Sprintf(
-		"Temperatura: %s, Humedad: %s, Insectos: %s, Luz: %s",
-		sensor.Temperatura, sensor.Humedad, sensor.Insectos, sensor.Luz,
-	)
+	// Solo enviar alerta si hay parámetros altos
+	if parametrosAltos > 0 {
+		descripcion := fmt.Sprintf(
+			"Temperatura: %s, Humedad: %s, Insectos: %s, Luz: %s",
+			sensor.Temperatura, sensor.Humedad, sensor.Insectos, sensor.Luz,
+		)
 
-	// Mapear la alerta para enviar al backend
-	alert := map[string]interface{}{
-		"estado":          estado,
-		"descripcion":     descripcion,
-		"fecha_hora":      time.Now().Format(time.RFC3339),
-		"tipo_alerta":     strings.Join(tipoAlertas, "/"),
-		"usuario_id":      usuarioID,
-		"evento_plaga_id": eventoPlagaID,
-	}
+		alert := map[string]interface{}{
+			"estado":          estado,
+			"descripcion":     descripcion,
+			"fecha_hora":      time.Now().Format(time.RFC3339),
+			"tipo_alerta":     strings.Join(tipoAlertas, "/"),
+			"usuario_id":      usuarioID,
+			"evento_plaga_id": eventoPlagaID,
+		}
 
-	// Serializar la alerta
-	body, err := json.Marshal(alert)
-	if err != nil {
-		log.Printf("Error serializando alerta: %v", err)
-		return
-	}
+		body, err := json.Marshal(alert)
+		if err != nil {
+			log.Printf("Error serializando alerta: %v", err)
+			return
+		}
 
-	// Enviar la alerta al backend de la casa central
-	resp, err := http.Post(service.BaseCentral+"/api/alertas/", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		log.Printf("Error enviando alerta: %v", err)
-		return
-	}
-	defer resp.Body.Close()
+		resp, err := http.Post(service.BaseCentral+"/api/alertas/", "application/json", bytes.NewBuffer(body))
+		if err != nil {
+			log.Printf("Error enviando alerta: %v", err)
+			return
+		}
+		defer resp.Body.Close()
 
-	// Manejar la respuesta del backend
-	if resp.StatusCode == http.StatusOK {
-		log.Printf("Alerta enviada con éxito. Código HTTP: %d", resp.StatusCode)
-	} else {
-		log.Printf("Error al enviar alerta. Código HTTP: %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusOK {
+			log.Printf("Alerta enviada con éxito. Estado: %s, Tipos: %v", estado, tipoAlertas)
+		} else {
+			log.Printf("Error al enviar alerta. Código HTTP: %d", resp.StatusCode)
+		}
 	}
 }

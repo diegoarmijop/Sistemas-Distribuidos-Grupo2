@@ -42,18 +42,38 @@
       <v-card-text v-else>
         <v-row>
           <v-col v-for="alert in sortedAlerts" :key="alert.id" cols="12" md="6">
-            <v-card :color="getAlertColor(alert.estado)" class="mx-2">
-              <v-card-title class="text-white">
-                <v-icon left color="white" class="mr-2">{{ getAlertIcon(alert.tipo_alerta) }}</v-icon>
-                {{ alert.tipo_alerta }}
+            <v-card :class="['alert-card', `status-${alert.estado.toLowerCase().replace(' ', '-')}`]">
+              <v-card-title :class="getStatusColorClass(alert.estado)">
+                <v-icon :color="getStatusIconColor(alert.estado)" class="mr-2">
+                  {{ getStatusIcon(alert.estado) }}
+                </v-icon>
+                {{ alert.estado }}
               </v-card-title>
-              <v-card-text class="white bg-grey-lighten-4">
-                <div class="text-body-1 font-weight-medium mb-2">{{ alert.descripcion }}</div>
-                <v-chip :color="getAlertColor(alert.estado)" label class="mb-2">
-                  {{ alert.estado }}
-                </v-chip>
-                <div class="text-caption mt-2">
-                  <v-icon small class="mr-1">mdi-clock-outline</v-icon>
+              
+              <v-card-text class="pt-4">
+                <!-- Tipos de Alerta -->
+                <div class="mb-3">
+                  <div class="d-flex flex-wrap gap-2">
+                    <v-chip
+                      v-for="(tipo, index) in splitTipoAlerta(alert.tipo_alerta)"
+                      :key="index"
+                      :color="getAlertTypeColor(tipo)"
+                      size="small"
+                      label
+                      class="ma-1"
+                    >
+                      <v-icon start size="small">{{ getTypeIcon(tipo) }}</v-icon>
+                      {{ tipo }}
+                    </v-chip>
+                  </div>
+                </div>
+
+                <!-- Descripción -->
+                <div class="text-body-1 mb-3">{{ alert.descripcion }}</div>
+
+                <!-- Fecha -->
+                <div class="text-caption d-flex align-center">
+                  <v-icon size="small" class="mr-1">mdi-clock-outline</v-icon>
                   {{ formatDate(alert.fecha_hora) }}
                 </div>
               </v-card-text>
@@ -92,39 +112,85 @@ export default {
       
       this.loading = true
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-        if (!token) {
-          this.$router.push('/login')
-          return
-        }
-
-        const response = await axios.get('http://localhost:8080/api/alertas/', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          }
-        })
-        
+        const response = await axios.get('http://localhost:8080/api/alertas/')
         this.latestAlerts = response.data
-
       } catch (error) {
         console.error('Error al obtener alertas:', error)
-        let message = 'Error al obtener alertas'
-        
-        if (error.response?.status === 401) {
-          this.$router.push('/login')
-          message = 'Sesión expirada'
-        } else if (error.response?.data?.error) {
-          message = error.response.data.error
-        }
-        
         this.$root.$emit('showMessage', {
-          text: message,
+          text: 'Error al obtener alertas',
           color: 'error'
         })
       } finally {
         this.loading = false
       }
+    },
+
+    splitTipoAlerta(tipo) {
+      return tipo ? tipo.split('/').map(t => t.trim()) : []
+    },
+
+    getStatusColorClass(estado) {
+      const colors = {
+        'Seria': 'bg-warning-lighten-4',
+        'Crítico': 'bg-error-lighten-4',
+        'Extremo Peligro': 'bg-deep-purple-lighten-4',
+        'Normal': 'bg-success-lighten-4'
+      }
+      return colors[estado] || 'bg-grey-lighten-4'
+    },
+
+    getStatusIconColor(estado) {
+      const colors = {
+        'Seria': 'warning-darken-2',
+        'Crítico': 'error',
+        'Extremo Peligro': 'deep-purple-darken-4',
+        'Normal': 'success'
+      }
+      return colors[estado] || 'grey'
+    },
+
+    getStatusIcon(estado) {
+      const icons = {
+        'Seria': 'mdi-alert',
+        'Crítico': 'mdi-alert-octagon',
+        'Extremo Peligro': 'mdi-alert-decagram',
+        'Normal': 'mdi-check-circle'
+      }
+      return icons[estado] || 'mdi-help-circle'
+    },
+
+    getAlertTypeColor(tipo) {
+      const typeColors = {
+        'Humedad baja-alta': 'blue-darken-2',
+        'Temperatura alta': 'deep-orange',
+        'Temperatura baja': 'light-blue',
+        'Nivel alto de insectos': 'red-darken-4',
+        'Nivel de luz extremadamente alto': 'amber-darken-4',
+        'Nivel de luz alto': 'amber'
+      }
+      return typeColors[tipo] || 'grey'
+    },
+
+    getTypeIcon(tipo) {
+      const icons = {
+        'Humedad baja-alta': 'mdi-water',
+        'Temperatura alta': 'mdi-thermometer-high',
+        'Temperatura baja': 'mdi-thermometer-low',
+        'Nivel alto de insectos': 'mdi-bug',
+        'Nivel de luz extremadamente alto': 'mdi-white-balance-sunny',
+        'Nivel de luz alto': 'mdi-brightness-6'
+      }
+      return icons[tipo] || 'mdi-alert'
+    },
+
+    formatDate(date) {
+      return new Date(date).toLocaleString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     },
 
     refreshAlerts() {
@@ -146,45 +212,6 @@ export default {
         clearInterval(this.pollingInterval)
         this.pollingInterval = null
       }
-    },
-
-    formatDate(date) {
-      return new Date(date).toLocaleString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
-    },
-
-    getAlertColor(estado) {
-      switch (estado.toLowerCase()) {
-        case 'crítico':
-          return 'error'
-        case 'alto':
-          return 'orange-darken-2'
-        case 'medio':
-          return 'warning'
-        case 'bajo':
-          return 'info'
-        default:
-          return 'grey'
-      }
-    },
-
-    getAlertIcon(tipo) {
-      switch (tipo.toLowerCase()) {
-        case 'parámetros alterados':
-          return 'mdi-alert-circle'
-        case 'presencia de plagas':
-          return 'mdi-bug'
-        case 'error del sistema':
-          return 'mdi-alert-octagon'
-        default:
-          return 'mdi-alert'
-      }
     }
   },
   mounted() {
@@ -198,23 +225,49 @@ export default {
 </script>
 
 <style scoped>
-.v-card {
+.alert-card {
   transition: all 0.3s ease-in-out;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.v-card:hover {
+.alert-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 4px 25px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* Estilo para las tarjetas de alerta */
-.v-card.error {
-  border-left: 5px solid var(--v-error-base);
+.gap-2 {
+  gap: 8px;
 }
-.v-card.warning {
-  border-left: 5px solid var(--v-warning-base);
+
+/* Estados específicos */
+.status-seria {
+  border-left: 4px solid #FB8C00;
 }
-.v-card.info {
-  border-left: 5px solid var(--v-info-base);
+
+.status-crítico {
+  border-left: 4px solid #D32F2F;
+}
+
+.status-extremo-peligro {
+  border-left: 4px solid #311B92;
+}
+
+.status-normal {
+  border-left: 4px solid #2E7D32;
+}
+
+/* Añadir animación para nuevas alertas */
+@keyframes highlight {
+  0% {
+    background-color: rgba(255, 193, 7, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.new-alert {
+  animation: highlight 2s ease-out;
 }
 </style>

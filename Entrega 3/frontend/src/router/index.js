@@ -41,6 +41,11 @@ const router = createRouter({
       path: '/alertas',
       name: 'alertas',
       component: () => import('../views/AlertasView.vue')
+    },
+    {
+      path: '/gestion-alertas',
+      name: 'gestion-alertas',
+      component: () => import('../views/AlertasGestion.vue')
     }
   ]
 })

@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 	"go-backend/models"
-	"time"
-
 	"gorm.io/gorm"
+	"strings"
+	"time"
 )
 
 // AlertService gestiona las operaciones sobre las alertas
@@ -130,4 +130,124 @@ func (s *AlertService) ObtenerResumenAlertas() (*ResumenAlertas, error) {
 		Diferencia: diferencia,
 		Tendencia:  tendencia,
 	}, nil
+}
+
+type ResolucionAlerta struct {
+	SolucionAplicada string `json:"solucion_aplicada"`
+	ResueltaPor      uint   `json:"resuelta_por"`
+	Comentarios      string `json:"comentarios"`
+	PlanAccion       string `json:"plan_accion"`
+}
+
+func (service *AlertService) ResolverAlerta(id uint, resolucion ResolucionAlerta) (*models.Alert, error) {
+	var alerta models.Alert
+	if err := service.DB.First(&alerta, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("alerta no encontrada")
+		}
+		return nil, err
+	}
+
+	ahora := time.Now()
+	alerta.Estado = "Resuelta"
+	alerta.SolucionAplicada = resolucion.SolucionAplicada
+	alerta.FechaResolucion = &ahora
+	alerta.ResueltaPor = resolucion.ResueltaPor
+	alerta.Comentarios = resolucion.Comentarios
+	alerta.PlanAccion = resolucion.PlanAccion
+
+	if err := service.DB.Save(&alerta).Error; err != nil {
+		return nil, err
+	}
+
+	return &alerta, nil
+}
+
+func (service *AlertService) ObtenerSugerenciasSolucion(tipoAlerta string) []string {
+	// Mapa base de sugerencias por tipo individual
+	sugerenciasBase := map[string][]string{
+		"Humedad baja-alta": {
+			"Ajustar sistema de riego",
+			"Revisar drenaje del suelo",
+			"Implementar sistema de ventilación",
+			"Monitorear niveles de humedad cada hora",
+		},
+		"Temperatura alta": {
+			"Activar sistema de enfriamiento",
+			"Implementar sombreado temporal",
+			"Aumentar ventilación",
+			"Revisar aislamiento térmico",
+		},
+		"Temperatura baja": {
+			"Activar sistema de calefacción",
+			"Verificar aislamiento térmico",
+			"Implementar cortinas térmicas",
+		},
+		"Nivel alto de insectos": {
+			"Aplicar control biológico",
+			"Implementar trampas para insectos",
+			"Revisar barreras físicas",
+			"Aplicar insecticidas orgánicos",
+		},
+		"Nivel de luz extremadamente alto": {
+			"Instalar mallas de sombreo",
+			"Ajustar orientación de cultivos",
+			"Implementar sistemas de protección solar",
+		},
+		"Nivel de luz alto": {
+			"Usar mallas de sombreo ligeras",
+			"Monitorear exposición solar",
+			"Ajustar horarios de exposición",
+		},
+	}
+
+	// Mapa de sugerencias para combinaciones específicas
+	sugerenciasCombinadas := map[string][]string{
+		"Humedad baja-alta/Temperatura alta": {
+			"Implementar sistema de nebulización",
+			"Aumentar ventilación y humidificación",
+			"Revisar y ajustar sistema de clima controlado",
+			"Establecer ciclos de riego más frecuentes con menor cantidad de agua",
+		},
+		"Temperatura alta/Nivel alto de insectos": {
+			"Implementar sistema integrado de control climático y plagas",
+			"Aumentar ventilación y aplicar control biológico",
+			"Revisar sellado de invernadero y aplicar control de temperatura",
+			"Establecer barreras físicas con ventilación controlada",
+		},
+		"Humedad baja-alta/Nivel alto de insectos": {
+			"Aplicar control biológico adaptado a condiciones de humedad",
+			"Ajustar riego y monitorear población de insectos",
+			"Implementar sistema de manejo integrado",
+			"Revisar y sellar puntos de entrada de insectos",
+		},
+	}
+
+	// Si existe una combinación exacta, usarla
+	if sugerencias, existe := sugerenciasCombinadas[tipoAlerta]; existe {
+		return sugerencias
+	}
+
+	// Si no hay combinación exacta, procesar tipos individuales
+	tipos := strings.Split(tipoAlerta, "/")
+	var todasSugerencias []string
+
+	for _, tipo := range tipos {
+		tipo = strings.TrimSpace(tipo)
+		if sugerencias, existe := sugerenciasBase[tipo]; existe {
+			todasSugerencias = append(todasSugerencias, sugerencias...)
+		}
+	}
+
+	// Eliminar duplicados
+	sugerenciasUnicas := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, s := range todasSugerencias {
+		if !seen[s] {
+			seen[s] = true
+			sugerenciasUnicas = append(sugerenciasUnicas, s)
+		}
+	}
+
+	return sugerenciasUnicas
 }

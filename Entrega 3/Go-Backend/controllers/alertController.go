@@ -5,6 +5,7 @@ import (
 	"go-backend/services"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -151,4 +152,41 @@ func (c *AlertController) ObtenerResumenAlertas(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, resumen)
+}
+
+func (controller *AlertController) ResolverAlerta(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var resolucion services.ResolucionAlerta
+	if err := c.ShouldBindJSON(&resolucion); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	alerta, err := controller.AlertService.ResolverAlerta(uint(id), resolucion)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, alerta)
+}
+
+func (controller *AlertController) ObtenerSugerenciasSolucion(c *gin.Context) {
+	tipoAlerta := c.Query("tipo")
+	if tipoAlerta == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Tipo de alerta no especificado"})
+		return
+	}
+
+	sugerencias := controller.AlertService.ObtenerSugerenciasSolucion(tipoAlerta)
+	c.JSON(http.StatusOK, gin.H{
+		"sugerencias":      sugerencias,
+		"tipos_detectados": strings.Split(tipoAlerta, "/"),
+	})
 }

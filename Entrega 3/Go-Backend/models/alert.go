@@ -15,6 +15,13 @@ type Alert struct {
 	//MedicionID    uint      `json:"medicion_id"`                         // FK de Medición
 	EventoPlagaID *uint `json:"evento_plaga_id"`                     // FK de Evento de Plaga
 	Usuario       *User `gorm:"foreignKey:UsuarioID" json:"usuario"` // Relación con Usuario
+
+	// Nuevos campos para resolución
+	SolucionAplicada string     `json:"solucion_aplicada,omitempty"`
+	FechaResolucion  *time.Time `json:"fecha_resolucion,omitempty"`
+	ResueltaPor      uint       `json:"resuelta_por,omitempty"`
+	Comentarios      string     `json:"comentarios,omitempty"`
+	PlanAccion       string     `json:"plan_accion,omitempty"`
 }
 
 // Esquema

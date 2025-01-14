@@ -163,15 +163,20 @@
             password: this.password
           })
   
-          // Guardar el token
-          if (this.rememberMe) {
-            localStorage.setItem('token', response.data.token)
-          } else {
-            sessionStorage.setItem('token', response.data.token)
+          // Guardar los datos del usuario
+          const userData = {
+            name: response.data.name,
+            email: response.data.email
           }
-          
+  
+          if (this.rememberMe) {
+            localStorage.setItem('userData', JSON.stringify(userData))
+          } else {
+            sessionStorage.setItem('userData', JSON.stringify(userData))
+          }
+  
           this.showNotification('¡Inicio de sesión exitoso!', 'success')
-          
+  
           // Pequeña pausa para mostrar la animación
           setTimeout(() => {
             this.$router.push('/dashboard')
@@ -179,7 +184,7 @@
   
         } catch (error) {
           let errorMessage = 'Error al iniciar sesión'
-          
+  
           if (error.response?.status === 401) {
             errorMessage = 'Credenciales incorrectas'
           } else if (error.response?.status === 404) {
@@ -187,7 +192,7 @@
           } else if (error.response?.data?.error) {
             errorMessage = error.response.data.error
           }
-          
+  
           this.showNotification(errorMessage, 'error')
         } finally {
           this.loading = false

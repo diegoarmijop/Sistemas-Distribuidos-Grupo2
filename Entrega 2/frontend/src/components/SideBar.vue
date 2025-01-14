@@ -7,13 +7,17 @@
         color="grey-lighten-4"
         class="elevation-3"
       >
-        <v-list>
-          <v-list-item
-            prepend-avatar="https://randomuser.me/api/portraits/men/78.jpg"
-            :title="userData.name || 'Usuario'"
-            :subtitle="userData.email || 'usuario@usach.cl'"
-          ></v-list-item>
-        </v-list>
+      <v-list>
+    <v-list-item>
+      <template v-slot:prepend>
+        <v-icon>mdi-account</v-icon>
+      </template>
+      <v-list-item-content>
+        <v-list-item-title>{{ userData.name || 'Usuario' }}</v-list-item-title>
+        <v-list-item-subtitle>{{ userData.email || 'usuario@usach.cl' }}</v-list-item-subtitle>
+      </v-list-item-content>
+    </v-list-item>
+  </v-list>
   
         <v-divider></v-divider>
   
@@ -153,7 +157,7 @@
   
     methods: {
       loadUserData() {
-        const userStr = localStorage.getItem('user') || sessionStorage.getItem('user')
+        const userStr = localStorage.getItem('userData') || sessionStorage.getItem('userData')
         if (userStr) {
           try {
             this.userData = JSON.parse(userStr)
@@ -165,9 +169,9 @@
   
       logout() {
         localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        localStorage.removeItem('userData')
         sessionStorage.removeItem('token')
-        sessionStorage.removeItem('user')
+        sessionStorage.removeItem('userData')
         this.$router.push('/login')
       },
   
@@ -180,7 +184,7 @@
       }
     }
   }
-  </script>
+</script>
   
   <style scoped>
   .v-navigation-drawer {
